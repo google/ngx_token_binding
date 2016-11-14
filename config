@@ -1,0 +1,121 @@
+# Copyright 2016 Google Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+ngx_addon_name=ngx_token_binding
+
+if [ -z "$ngx_module_link" ]; then
+cat << END
+
+$0: error: Token Binding module requires recent version of NGINX (1.9.11+).
+
+END
+    exit 1
+fi
+
+#
+# core module with Token Binding library
+#
+
+if [ ! -f "$ngx_addon_dir/deps/token_bind/token_bind_common.h" ]; then
+cat << END
+
+$0: error: \
+Token Bind library is missing from the $ngx_addon_dir/deps/token_bind directory.
+
+Please make sure that the git submodule has been checked out:
+
+    cd $ngx_addon_dir && git submodule update --init && cd $PWD
+
+END
+    exit 1
+fi
+
+ngx_module_type=CORE
+ngx_module_name=ngx_token_binding_module
+ngx_module_incs="$ngx_addon_dir/deps/token_bind \
+                 $ngx_addon_dir/src"
+ngx_module_deps="$ngx_addon_dir/deps/token_bind/tb_bytestring.h \
+                 $ngx_addon_dir/deps/token_bind/token_bind_common.h \
+                 $ngx_addon_dir/deps/token_bind/token_bind_server.h \
+                 $ngx_addon_dir/src/ngx_token_binding_module.h"
+ngx_module_srcs="$ngx_addon_dir/deps/token_bind/cbb.c \
+                 $ngx_addon_dir/deps/token_bind/cbs.c \
+                 $ngx_addon_dir/deps/token_bind/token_bind_common.c \
+                 $ngx_addon_dir/deps/token_bind/token_bind_server.c \
+                 $ngx_addon_dir/src/ngx_token_binding_module.c"
+ngx_module_libs=
+
+. auto/module
+
+USE_OPENSSL=YES
+
+have=NGX_TOKEN_BINDING . auto/have
+
+#
+# HTTP module
+#
+
+if [ "$HTTP_SSL" != YES ]; then
+cat << END
+
+$0: error: Token Binding module requires HTTP SSL module.
+
+Please build NGINX using --with-http_ssl_module configure option.
+
+END
+    exit 1
+fi
+
+ngx_module_type=HTTP_FILTER
+ngx_module_name=ngx_http_token_binding_module
+ngx_module_incs=
+ngx_module_deps=
+ngx_module_srcs="$ngx_addon_dir/src/ngx_http_token_binding_module.c"
+ngx_module_libs=
+ngx_module_order="$ngx_module_name \
+                  ngx_http_range_header_filter_module \
+                  ngx_http_gzip_filter_module \
+                  ngx_http_postpone_filter_module \
+                  ngx_http_ssi_filter_module \
+                  ngx_http_charset_filter_module \
+                  ngx_http_xslt_filter_module \
+                  ngx_http_image_filter_module \
+                  ngx_http_sub_filter_module \
+                  ngx_http_addition_filter_module \
+                  ngx_http_gunzip_filter_module \
+                  ngx_http_userid_filter_module \
+                  ngx_http_headers_filter_module \
+                  ngx_http_copy_filter_module \
+                  ngx_http_range_body_filter_module \
+                  ngx_http_not_modified_filter_module \
+                  ngx_http_slice_filter_module"
+
+. auto/module
+
+if [ "$ngx_module_link" != DYNAMIC ]; then
+    # ngx_module_order doesn't work with static modules,
+    # so we must re-order filters here.
+
+    if [ "$HTTP_V2" = YES ]; then
+        next=ngx_http_v2_filter_module
+    else
+        next=ngx_http_chunked_filter_module
+    fi
+
+    HTTP_FILTER_MODULES=`echo $HTTP_FILTER_MODULES \
+                         | sed "s/$ngx_module_name//" \
+                         | sed "s/$next/$next $ngx_module_name/"`
+fi
+
+have=NGX_HTTP_TOKEN_BINDING . auto/have
