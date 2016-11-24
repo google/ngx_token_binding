@@ -27,11 +27,13 @@ fi
 # core module with Token Binding library
 #
 
-if [ ! -f "$ngx_addon_dir/deps/token_bind/token_bind_common.h" ]; then
+token_bind="$ngx_addon_dir/deps/token_bind"
+
+if [ ! -f "$token_bind/token_bind_common.h" ]; then
 cat << END
 
 $0: error: \
-Token Bind library is missing from the $ngx_addon_dir/deps/token_bind directory.
+Token Bind library is missing from the $token_bind directory.
 
 Please make sure that the git submodule has been checked out:
 
@@ -43,18 +45,19 @@ fi
 
 ngx_module_type=CORE
 ngx_module_name=ngx_token_binding_module
-ngx_module_incs="$ngx_addon_dir/deps/token_bind \
+ngx_module_incs="$token_bind \
                  $ngx_addon_dir/src"
-ngx_module_deps="$ngx_addon_dir/deps/token_bind/tb_bytestring.h \
-                 $ngx_addon_dir/deps/token_bind/token_bind_common.h \
-                 $ngx_addon_dir/deps/token_bind/token_bind_server.h \
+ngx_module_deps="$token_bind/tb_bytestring.h \
+                 $token_bind/token_bind_common.h \
+                 $token_bind/token_bind_server.h \
                  $ngx_addon_dir/src/ngx_token_binding_module.h"
-ngx_module_srcs="$ngx_addon_dir/deps/token_bind/cbb.c \
-                 $ngx_addon_dir/deps/token_bind/cbs.c \
-                 $ngx_addon_dir/deps/token_bind/token_bind_common.c \
-                 $ngx_addon_dir/deps/token_bind/token_bind_server.c \
+ngx_module_srcs="$token_bind/cbb.c \
+                 $token_bind/cbs.c \
+                 $token_bind/token_bind_common.c \
+                 $token_bind/token_bind_server.c \
                  $ngx_addon_dir/src/ngx_token_binding_module.c"
 ngx_module_libs=
+ngx_module_order=
 
 . auto/module
 
