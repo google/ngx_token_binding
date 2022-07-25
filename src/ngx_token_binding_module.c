@@ -182,11 +182,11 @@ ngx_token_binding_key_type(ngx_str_t *id, ngx_str_t *out)
     switch (tbGetKeyType(id->data, id->len)) {
 
     case TB_RSA2048_PKCS15:
-        ngx_str_set(out, "rsa2048-pss");
+        ngx_str_set(out, "rsa2048-pkcs1.5");
         break;
 
     case TB_RSA2048_PSS:
-        ngx_str_set(out, "rsa2048-pkcs1.5");
+        ngx_str_set(out, "rsa2048-pss");
         break;
 
     case TB_ECDSAP256:
