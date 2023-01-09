@@ -176,7 +176,11 @@ ngx_http_token_binding_handler(ngx_http_request_t *r)
     ngx_str_t                           decoded, provided, referred;
     ngx_uint_t                          tls_ok, http_ok, i;
     ngx_list_part_t                    *part;
+#if nginx_version < 1023000
     ngx_table_elt_t                    *header, **cookie;;
+#else
+    ngx_table_elt_t                    *header, *c;
+#endif
     ngx_http_variable_value_t          *vv;
     ngx_http_token_binding_srv_conf_t  *tbscf;
 
@@ -324,6 +328,7 @@ cookies:
         return NGX_DECLINED;
     }
 
+#if nginx_version < 1023000
     cookie = r->headers_in.cookies.elts;
 
     for (i = 0; i < r->headers_in.cookies.nelts; i++) {
@@ -334,6 +339,16 @@ cookies:
             return NGX_HTTP_INTERNAL_SERVER_ERROR;
         }
     }
+#else
+    for (c = r->headers_in.cookie; c; c = c->next) {
+
+        if (ngx_http_token_binding_process_cookie_header(r, c)
+            == NGX_ERROR)
+        {
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
+    }
+#endif
 
     return NGX_DECLINED;
 }
